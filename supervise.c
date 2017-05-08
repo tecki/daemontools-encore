@@ -17,6 +17,7 @@
 #include "iopause.h"
 #include "taia.h"
 #include "deepsleep.h"
+#include "subreaper.h"
 #include "stralloc.h"
 #include "svpath.h"
 #include "svstatus.h"
@@ -44,6 +45,7 @@ int fdok;
 int fdstatus;
 
 int flagexit = 0;
+int flagsubreaper = 0;
 int firstrun = 1;
 const char *runscript = 0;
 
@@ -277,11 +279,17 @@ static void reaper(void)
     int pid = wait_nohang(&wstat);
     struct svc *svc;
     if (!pid) break;
-    if ((pid == -1) && (errno != error_intr)) break;
-    if (pid == svcmain.pid)
+    if (flagsubreaper && pid == svcmain.pid) {
+      svcmain.flagstatus = svstatus_orphanage;
+      announce();
+      continue;
+    }
+    if ((pid == svcmain.pid) || ((pid == -1) && (errno == ECHILD)))
       svc = &svcmain;
     else if (pid == svclog.pid)
       svc = &svclog;
+    else if ((pid == -1) && (errno != error_intr))
+      break;
     else
       continue;
     svc->pid = 0;
@@ -454,9 +462,16 @@ int main(int argc,char **argv)
     strerr_die3sys(111,FATAL,"unable to acquire ",fntemp);
   closeonexec(fdlock);
 
+  if (stat_exists("subreaper") != 0) {
+    flagsubreaper = 1;
+    if (set_subreaper())
+      strerr_die2sys(111,FATAL,"could not set subreaper attribute");
+  }
   if (stat_isexec("log") > 0) {
     if (pipe(logpipe) != 0)
       strerr_die3sys(111,FATAL,"unable to create pipe for ",dir);
+    else if (flagsubreaper)
+      strerr_die2sys(111,FATAL,"subreaper and log are mutually exclusive");
     svclog.flagwantup = 1;
   }
   if (stat("down",&st) != -1) {
