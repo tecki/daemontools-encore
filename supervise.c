@@ -391,6 +391,8 @@ void doit(void)
   iopause_fd x[2];
   struct taia deadline;
   struct taia stamp;
+  struct stat st;
+  int r;
   char ch;
 
   announce();
@@ -405,7 +407,7 @@ void doit(void)
     x[1].fd = fdcontrol;
     x[1].events = IOPAUSE_READ;
     taia_now(&stamp);
-    taia_uint(&deadline,3600);
+    taia_uint(&deadline,10);
     taia_add(&deadline,&stamp,&deadline);
     iopause(x,2,&deadline,&stamp);
 
@@ -415,6 +417,16 @@ void doit(void)
       ;
 
     reaper();
+
+    r = fstat(fdcontrol,&st);
+    if (r == 0 && st.st_nlink == 0) {
+        if (svcmain.pid)
+	    kill(-svcmain.pid,SIGKILL);
+        if (svclog.pid)
+	    kill(-svclog.pid,SIGKILL);
+        flagexit = 1;
+    }
+
     controller();
 
     if (flagexit

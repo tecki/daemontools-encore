@@ -15,3 +15,17 @@ supervise test.sv
 wait
 rm -f test.sv/log
 echo
+
+echo '--- supervise stops when fifo is deleted'
+catexe test.sv/run <<EOF
+#!/bin/sh
+rm supervise/control
+exec ../../sleeper
+EOF
+catexe test.sv/log <<EOF
+#!/bin/sh
+exec ../../sleeper
+EOF
+supervise test.sv &
+wait
+rm -f test.sv/run test.sv/log
