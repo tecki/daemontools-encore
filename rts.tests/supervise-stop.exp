@@ -5,3 +5,4 @@ in stop
 Caught CONT
 Caught TERM
 
+--- supervise stops when fifo is deleted
