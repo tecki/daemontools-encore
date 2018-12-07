@@ -8,10 +8,23 @@ exec ../../sleeper
 EOF
 catexe test.sv/run2 <<EOF
 #!/bin/sh
+nohup ../../sleeper >output &
+../../pgrphack ../../supervise subtest >output2 &
+mv run3 run
 echo the second run
+EOF
+catexe test.sv/run3 <<EOF
+#!/bin/sh
+echo the third run
 svc -x .
 EOF
 touch test.sv/orphanage
+mkdir test.sv/subtest
+catexe test.sv/subtest/run <<EOF
+#!/bin/sh
+echo the subtest
+exec ../../../sleeper
+EOF
 supervise test.sv &
 until svok test.sv || ! jobs %% >/dev/null 2>&1
 do
@@ -33,8 +46,20 @@ then
     svstat test.sv | filter_svstat
     cat test.sv/output
     svc -+h test.sv
+    while [ -e test.sv/run3 ]
+    do
+	sleep 1
+    done
+    svc -+t test.sv
     wait
+    svstat test.sv/subtest | filter_svstat
+    svc -tx test.sv/subtest
+    while svok test.sv/subtest
+    do
+	sleep 1
+    done
     cat test.sv/output
+    cat test.sv/output2
 else
     echo "This test fails on older Unix systems"
     echo "(everything which is not Linux or FreeBSD)"

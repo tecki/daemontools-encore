@@ -4,4 +4,8 @@ test.sv: up (pid x) x seconds, running
 Caught TERM
 test.sv: up (pid x) x seconds, orphanage
 the second run
-Caught HUP
+the third run
+test.sv/subtest: up (pid x) x seconds, running
+Caught TERM
+the subtest
+Caught TERM

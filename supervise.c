@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <signal.h>
 #include "sig.h"
 #include "strerr.h"
@@ -259,7 +260,7 @@ void trystop(struct svc *svc)
 
 static void killsvc(const struct svc *svc,int groupflag,int signo)
 {
-  if (svc->pid)
+  if (svc->pid && (svc->flagstatus != svstatus_orphanage || groupflag < 0))
     kill(svc->pid*groupflag,signo);
 }
 
@@ -276,8 +277,16 @@ static void reaper(void)
 {
   for (;;) {
     int wstat;
-    int pid = wait_nohang(&wstat);
+    int pid = 0;
     struct svc *svc;
+
+    if (svcmain.flagstatus == svstatus_orphanage) {
+      pid = waitpid(-svcmain.pid, &wstat, WNOHANG);
+      if (pid > 0) continue;
+    }
+
+    if (!pid)
+      pid = wait_nohang(&wstat);
     if (!pid) break;
     if (flagorphanage && pid == svcmain.pid) {
       svcmain.flagstatus = svstatus_orphanage;
