@@ -325,6 +325,21 @@ static void reaper(void)
   }
 }
 
+static void checkfifo(void)
+{
+  struct stat st;
+  int r;
+
+  r = fstat(fdcontrol,&st);
+  if (r == 0 && st.st_nlink == 0) {
+      if (svcmain.pid)
+        kill(-svcmain.pid,SIGKILL);
+      if (svclog.pid)
+        kill(-svclog.pid,SIGKILL);
+      flagexit = 1;
+  }
+}
+
 static void controller(void)
 {
   struct svc *svc = &svcmain;
@@ -400,8 +415,6 @@ void doit(void)
   iopause_fd x[2];
   struct taia deadline;
   struct taia stamp;
-  struct stat st;
-  int r;
   char ch;
 
   announce();
@@ -426,16 +439,7 @@ void doit(void)
       ;
 
     reaper();
-
-    r = fstat(fdcontrol,&st);
-    if (r == 0 && st.st_nlink == 0) {
-        if (svcmain.pid)
-	    kill(-svcmain.pid,SIGKILL);
-        if (svclog.pid)
-	    kill(-svclog.pid,SIGKILL);
-        flagexit = 1;
-    }
-
+    checkfifo();
     controller();
 
     if (flagexit
