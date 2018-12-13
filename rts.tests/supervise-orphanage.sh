@@ -1,7 +1,13 @@
 echo '--- supervise properly runs an orphanage'
+catexe test.sv/doublesleeper <<EOF
+#!/bin/sh
+trap "echo doublesleeper caught HUP" 1
+../../sleeper
+exec ../../sleeper
+EOF
 catexe test.sv/run <<EOF
 #!/bin/sh
-nohup ../../sleeper >output &
+./doublesleeper >output &
 mv run2 run
 echo the first run
 exec ../../sleeper
@@ -45,12 +51,11 @@ then
     done
     svstat test.sv | filter_svstat
     cat test.sv/output
-    svc -+h test.sv
+    svc -+t test.sv
     while [ -e test.sv/run3 ]
     do
 	sleep 1
     done
-    svc -+t test.sv
     wait
     svstat test.sv/subtest | filter_svstat
     svc -tx test.sv/subtest

@@ -293,7 +293,13 @@ static void reaper(void)
     if (flagorphanage && pid == svcmain.pid) {
       svcmain.flagstatus = svstatus_orphanage;
       announce();
-      continue;
+      do {
+        pid = waitpid(-svcmain.pid, &wstat, WNOHANG);
+      } while (pid > 0);
+      if (!pid) {
+        killsvc(&svcmain,-1,SIGHUP);
+        continue;
+      }
     }
     if ((pid == svcmain.pid) || ((pid == -1) && (errno == ECHILD)))
       svc = &svcmain;
