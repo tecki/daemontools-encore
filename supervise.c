@@ -275,10 +275,12 @@ static void stopsvc(struct svc *svc,int groupflag)
 
 static void reaper(void)
 {
-  for (;;) {
-    int wstat;
-    int pid = 0;
-    struct svc *svc;
+  int wstat;
+  int pid;
+  struct svc *svc = NULL;
+
+  while (!svc) {
+    pid = 0;
 
     if (svcmain.flagstatus == svstatus_orphanage) {
       pid = waitpid(-svcmain.pid, &wstat, WNOHANG);
@@ -287,7 +289,7 @@ static void reaper(void)
 
     if (!pid)
       pid = wait_nohang(&wstat);
-    if (!pid) break;
+    if (!pid) return;
     if (flagorphanage && pid == svcmain.pid) {
       svcmain.flagstatus = svstatus_orphanage;
       announce();
@@ -298,31 +300,28 @@ static void reaper(void)
     else if (pid == svclog.pid)
       svc = &svclog;
     else if ((pid == -1) && (errno != error_intr))
-      break;
-    else
-      continue;
-    svc->pid = 0;
-    if ((svc == &svcmain && svc->flagstatus == svstatus_starting && (wait_crashed(wstat) || wait_exitcode(wstat) != 0))
-        || (!wait_crashed(wstat) && wait_exitcode(wstat) == 100)) {
-      svc->flagwantup = 0;
-      svc->flagstatus = svstatus_failed;
-    }
-    else if (svc == &svcmain && svc->flagstatus == svstatus_starting) {
-    }
-    else if (!svc->flagwant || !svc->flagwantup)
-      svc->flagstatus = svstatus_stopped;
-    pidchange(svc, wait_crashed(wstat) ? "killed" : "exit",
-              wait_crashed(wstat) ? wait_stopsig(wstat) : wait_exitcode(wstat),
-              pid);
-    firstrun = 0;
-    if ((svc->flagwant && svc->flagwantup) || (svc == &svcmain && svc->flagstatus == svstatus_starting)) {
-      if (!flagexit)
-        trystart(svc);
-    }
-    else if (svc->flagstatus != svstatus_failed)
-      trystop(svc);
-    break;
+      return;
   }
+  svc->pid = 0;
+  if ((svc == &svcmain && svc->flagstatus == svstatus_starting && (wait_crashed(wstat) || wait_exitcode(wstat) != 0))
+      || (!wait_crashed(wstat) && wait_exitcode(wstat) == 100)) {
+    svc->flagwantup = 0;
+    svc->flagstatus = svstatus_failed;
+  }
+  else if (svc == &svcmain && svc->flagstatus == svstatus_starting) {
+  }
+  else if (!svc->flagwant || !svc->flagwantup)
+    svc->flagstatus = svstatus_stopped;
+  pidchange(svc, wait_crashed(wstat) ? "killed" : "exit",
+            wait_crashed(wstat) ? wait_stopsig(wstat) : wait_exitcode(wstat),
+            pid);
+  firstrun = 0;
+  if ((svc->flagwant && svc->flagwantup) || (svc == &svcmain && svc->flagstatus == svstatus_starting)) {
+    if (!flagexit)
+      trystart(svc);
+  }
+  else if (svc->flagstatus != svstatus_failed)
+    trystop(svc);
 }
 
 static void checkfifo(void)
