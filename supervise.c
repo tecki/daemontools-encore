@@ -298,6 +298,7 @@ static void reaper(void)
       } while (pid > 0);
       if (!pid) {
         killsvc(&svcmain,-1,SIGHUP);
+        killsvc(&svcmain,-1,SIGCONT);
         continue;
       }
     }
