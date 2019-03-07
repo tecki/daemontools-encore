@@ -23,6 +23,12 @@ svstat test.sv \
 | sed -r 's, \(.+\),,' \
 | sed -r 's, ([0-9]|1[0-9]) second.+$, ok,'
 
+sleep 11
+
+svstat test.sv \
+| sed -r 's, \(.+\),,' \
+| sed -r 's, (1[0-9]) second.+$, ok,'
+
 kill $svpid
 wait
 

@@ -302,7 +302,7 @@ static void reaper(void)
         continue;
       }
     }
-    if ((pid == svcmain.pid) || ((pid == -1) && (errno == ECHILD)))
+    if ((pid == svcmain.pid) || (svcmain.pid && (pid == -1) && (errno == ECHILD)))
       svc = &svcmain;
     else if (pid == svclog.pid)
       svc = &svclog;
