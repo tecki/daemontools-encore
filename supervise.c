@@ -47,6 +47,7 @@ int fdstatus;
 
 int flagexit = 0;
 int flagorphanage = 0;
+int orphanagewstat;
 int firstrun = 1;
 const char *runscript = 0;
 
@@ -290,6 +291,8 @@ static void reaper(void)
     if (!pid)
       pid = wait_nohang(&wstat);
     if (!pid) return;
+    if (pid == svcmain.pid)
+      orphanagewstat = wstat;
     if (flagorphanage && pid == svcmain.pid) {
       svcmain.flagstatus = svstatus_orphanage;
       announce();
@@ -302,8 +305,10 @@ static void reaper(void)
         continue;
       }
     }
-    if ((pid == svcmain.pid) || (svcmain.pid && (pid == -1) && (errno == ECHILD)))
+    if ((pid == svcmain.pid) || (svcmain.pid && (pid == -1) && (errno == ECHILD))) {
       svc = &svcmain;
+      wstat = orphanagewstat;
+    }
     else if (pid == svclog.pid)
       svc = &svclog;
     else if ((pid == -1) && (errno != error_intr))
