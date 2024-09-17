@@ -1,5 +1,7 @@
 /* Public domain. */
 
+#include <string.h>
+
 #include "byte.h"
 #include "hasmemrchr.h"
 
